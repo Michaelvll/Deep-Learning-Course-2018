@@ -44,15 +44,17 @@ def softmax_loss_naive(W, X, y, reg):
     #     for d in range(D):
     #         for c in range(C):
     #             dW[d, c] += X[i, d] * (y_[c] - (y[i] == c)) / N
-
-    z = X.dot(W)
-    numerator = np.exp(z)
-    denominator = np.sum(numerator, axis=1)
-    y_ = numerator / denominator[:, np.newaxis]
-    loss += np.sum(-np.log(y_[np.arange(N), y]) / N)
-    for d in range(D):
+    for i in range(N):
+        z = X[i, :].dot(W)
+        z -= np.max(z)
+        numerator = np.exp(z)
+        denominator = np.sum(numerator)
+        y_ = numerator / denominator
+        loss += np.sum(-np.log(y_[y[i]]) / N)
         for c in range(C):
-            dW[d, c] += X[:, d].T.dot(y_[:, c] - (y == c)) / N
+            dW[:, c] += X[i, :] * (y_[c] - (y[i] == c)) / N
+    loss += 0.5 * reg * np.trace(W.T.dot(W))
+    dW += reg * W
     #############################################################################
     #                          END OF YOUR CODE                                 #
     #############################################################################
@@ -78,12 +80,14 @@ def softmax_loss_vectorized(W, X, y, reg):
     #############################################################################
     N = np.shape(X)[0]
     z = X.dot(W)
+    z -= np.max(z, axis=1)[:, np.newaxis]
     numerator = np.exp(z)
     denominator = np.sum(numerator, axis=1)
     y_ = numerator / denominator[:, np.newaxis]
-    loss = np.sum(-np.log(y_[np.arange(N), y])) / N
+    loss = np.sum(-np.log(y_[np.arange(N), y]) / N)
+    loss += 0.5 * reg * np.trace(W.T.dot(W))
     y_[np.arange(N), y] -= 1
-    dW = X.T.dot(y_) / N
+    dW = X.T.dot(y_) / N + reg * W
     #############################################################################
     #                          END OF YOUR CODE                                 #
     #############################################################################
