@@ -1,0 +1,27 @@
+iteration 0 / 2450: loss 2.304085
+iteration 100 / 2450: loss 1.934899
+iteration 200 / 2450: loss 1.902940
+iteration 300 / 2450: loss 1.709025
+iteration 400 / 2450: loss 1.577439
+iteration 500 / 2450: loss 1.606931
+iteration 600 / 2450: loss 1.627255
+iteration 700 / 2450: loss 1.670742
+iteration 800 / 2450: loss 1.600562
+iteration 900 / 2450: loss 1.605534
+iteration 1000 / 2450: loss 1.548901
+iteration 1100 / 2450: loss 1.652590
+iteration 1200 / 2450: loss 1.615956
+iteration 1300 / 2450: loss 1.457464
+iteration 1400 / 2450: loss 1.628036
+iteration 1500 / 2450: loss 1.404255
+iteration 1600 / 2450: loss 1.627061
+iteration 1700 / 2450: loss 1.545325
+iteration 1800 / 2450: loss 1.569235
+iteration 1900 / 2450: loss 1.475243
+iteration 2000 / 2450: loss 1.665717
+iteration 2100 / 2450: loss 1.594669
+iteration 2200 / 2450: loss 1.519531
+iteration 2300 / 2450: loss 1.421888
+iteration 2400 / 2450: loss 1.425023
+Validation accuracy:  0.512
+(100, 0.001, 10, 1.0)
