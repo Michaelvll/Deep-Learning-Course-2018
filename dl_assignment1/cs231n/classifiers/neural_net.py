@@ -99,7 +99,7 @@ class TwoLayerNet(object):
         denominator = np.sum(numerator, axis=1)
         y_ = numerator / denominator[:, np.newaxis]
         loss = np.mean(-np.log(y_[np.arange(N), y]))
-        loss += 0.5 * reg * (np.linalg.norm(W1)**2 + np.linalg.norm(W2)**2)
+        loss += 0.5 * reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
         #############################################################################
         #                              END OF YOUR CODE                             #
         #############################################################################
