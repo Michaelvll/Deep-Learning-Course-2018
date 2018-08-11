@@ -113,12 +113,12 @@ class TwoLayerNet(object):
         #############################################################################
         y_[np.arange(N), y] -= 1
         grads['W2'] = h.T.dot(y_) / N + reg * W2
-        grads['b2'] = np.mean(y_, axis=0) + reg * b2
+        grads['b2'] = np.mean(y_, axis=0)
         dh = y_.dot(W2.T)
         da = dh
         da[a < 0] = 0
         grads['W1'] = X.T.dot(da) / N + reg * W1
-        grads['b1'] = np.mean(da, axis=0) + reg * b1
+        grads['b1'] = np.mean(da, axis=0)
         #############################################################################
         #                              END OF YOUR CODE                             #
         #############################################################################
