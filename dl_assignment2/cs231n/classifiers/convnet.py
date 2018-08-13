@@ -39,14 +39,14 @@ class AffineEndCNN(object):
                 prev_dim, hidden_dim)
             self.params['b{}'.format(dictID)] = np.zeros(hidden_dim)
             prev_dim = hidden_dim
-            # if use_batchnorm and idx != len(self.layer_dims) - 1:
-            #     self.params['gamma{}'.format(dictID)] = np.ones((num_filter))
-            #     self.params['beta{}'.format(dictID)] = np.zeros((num_filter))
+            if use_batchnorm and idx != len(self.layer_dims) - 1:
+                self.params['gamma{}'.format(dictID)] = np.ones((hidden_dim))
+                self.params['beta{}'.format(dictID)] = np.zeros((hidden_dim))
 
         self.bn_params = []
         if self.use_batchnorm:
             self.bn_params = [{'mode': 'train'}
-                              for _, _ in enumerate(num_filters)]
+                              for _ in xrange(len(num_filters) + len(hidden_dims))]
 
         for k, v in self.params.iteritems():
             self.params[k] = v.astype(dtype)
@@ -61,7 +61,9 @@ class AffineEndCNN(object):
         scores = None
         caches = []
         layer_out = X
-        for idx, _ in enumerate(self.num_filters):
+        N = len(self.num_filters)
+        M = len(self.layer_dims)
+        for idx in xrange(N):
             conv_param = {'stride': 1, 'pad': (self.filter_sizes[idx] - 1) / 2}
             pool_param = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
             dictID = idx + 1
@@ -77,19 +79,25 @@ class AffineEndCNN(object):
                     layer_out, W, b, conv_param, pool_param)
             caches.append(cache)
 
-        for idx, _ in enumerate(self.layer_dims):
-            dictID = idx + len(self.num_filters) + 1
+        for idx in xrange(M):
+            dictID = idx + N + 1
             W, b = self.params['W{}'.format(
                 dictID)], self.params['b{}'.format(dictID)]
-            layer_out, cache = affine_forward(layer_out, W, b)
+            if idx == M - 1:
+                layer_out, cache = affine_forward(layer_out, W, b)
+            elif self.use_batchnorm:
+                gamma, beta = self.params['gamma{}'.format(
+                    dictID)], self.params['beta{}'.format(dictID)]
+                layer_out, cache = affine_norm_relu_forward(
+                    layer_out, W, b, gamma, beta, self.bn_params[N + idx])
+            else:
+                layer_out, cache = affine_relu_forward(layer_out, W, b)
             caches.append(cache)
         scores = layer_out
 
         if mode == 'test':
             return scores
 
-        N = len(self.num_filters)
-        M = len(self.layer_dims)
         grads = {}
         loss, dout = softmax_loss(scores, y)
         for idx in xrange(M):
@@ -97,7 +105,15 @@ class AffineEndCNN(object):
             W, b = self.params['W{}'.format(
                 dictID)], self.params['b{}'.format(dictID)]
             loss += 0.5 * np.sum(W*W)
-            dout, dw, db = affine_backward(dout, caches[-idx - 1])
+            if idx == 0:
+                dout, dw, db = affine_backward(dout, caches[-idx - 1])
+            elif self.use_batchnorm:
+                dout, dw, db, dgamma, dbeta = affine_norm_relu_backward(
+                    dout, caches[-idx-1])
+                grads['gamma{}'.format(dictID)] = dgamma
+                grads['beta{}'.format(dictID)] = dbeta
+            else:
+                dout, dw, db = affine_relu_backward(dout, caches[-idx-1])
             grads['W{}'.format(dictID)] = dw + self.reg * W
             grads['b{}'.format(dictID)] = db
         for idx in xrange(N - 1, -1, -1):
@@ -132,4 +148,20 @@ def conv_norm_relu_pool_backward(dout, cache):
     dn = relu_backward(ds, relu_cache)
     da, dgamma, dbeta = spatial_batchnorm_backward(dn, bn_cache)
     dx, dw, db = conv_backward_fast(da, conv_cache)
+    return dx, dw, db, dgamma, dbeta
+
+
+def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
+    a, fc_cache = affine_forward(x, w, b)
+    z, bn_cache = batchnorm_forward(a, gamma, beta, bn_param)
+    out, relu_cache = relu_forward(z)
+    cache = (fc_cache, bn_cache, relu_cache)
+    return out, cache
+
+
+def affine_norm_relu_backward(dout, cache):
+    fc_cache, bn_cache, relu_cache = cache
+    dz = relu_backward(dout, relu_cache)
+    da, dgamma, dbeta = batchnorm_backward(dz, bn_cache)
+    dx, dw, db = affine_backward(da, fc_cache)
     return dx, dw, db, dgamma, dbeta
