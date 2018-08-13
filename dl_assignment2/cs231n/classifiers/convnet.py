@@ -10,9 +10,10 @@ class AffineEndCNN(object):
     [conv-sbatchnorm-relu-pool]xN - [affine-batchnorm]xM - affine - softmax
     """
 
-    def __init__(self, input_dim=(3, 32, 32), num_filters=[32], filter_sizes=[4], hidden_dims=[100], num_classes=10, weight_scale=1e-3, reg=0.0, use_batchnorm=True, dtype=np.float32):
+    def __init__(self, input_dim=(3, 32, 32), num_filters=[32], filter_sizes=[4], hidden_dims=[100], num_classes=10, weight_scale=1e-3, reg=0.0, use_batchnorm=True, use_affine_batchnorm_relu=False, dtype=np.float32):
         self.params = {}
         self.use_batchnorm = use_batchnorm
+        self.use_affine_batchnorm_relu = use_affine_batchnorm_relu
         self.reg = reg
         self.dtype = dtype
         self.num_filters = num_filters
@@ -39,14 +40,17 @@ class AffineEndCNN(object):
                 prev_dim, hidden_dim) * weight_scale
             self.params['b{}'.format(dictID)] = np.zeros(hidden_dim)
             prev_dim = hidden_dim
-            if use_batchnorm and idx != len(self.layer_dims) - 1:
+            if use_affine_batchnorm_relu and idx != len(self.layer_dims) - 1:
                 self.params['gamma{}'.format(dictID)] = np.ones((hidden_dim))
                 self.params['beta{}'.format(dictID)] = np.zeros((hidden_dim))
 
         self.bn_params = []
         if self.use_batchnorm:
             self.bn_params = [{'mode': 'train'}
-                              for _ in xrange(len(num_filters) + len(hidden_dims))]
+                              for _ in xrange(len(num_filters))]
+            if self.use_affine_batchnorm_relu:
+                self.bn_params += [{'mode': 'train'}
+                                   for _ in xrange(len(hidden_dims))]
 
         for k, v in self.params.iteritems():
             self.params[k] = v.astype(dtype)
@@ -85,13 +89,13 @@ class AffineEndCNN(object):
                 dictID)], self.params['b{}'.format(dictID)]
             if idx == M - 1:
                 layer_out, cache = affine_forward(layer_out, W, b)
-            elif self.use_batchnorm:
+            elif self.use_affine_batchnorm_relu:
                 gamma, beta = self.params['gamma{}'.format(
                     dictID)], self.params['beta{}'.format(dictID)]
                 layer_out, cache = affine_norm_relu_forward(
                     layer_out, W, b, gamma, beta, self.bn_params[N + idx])
             else:
-                layer_out, cache = affine_relu_forward(layer_out, W, b)
+                layer_out, cache = affine_forward(layer_out, W, b)
             caches.append(cache)
         scores = layer_out
 
@@ -107,13 +111,13 @@ class AffineEndCNN(object):
             loss += 0.5 * self.reg * np.sum(W*W)
             if idx == 0:
                 dout, dw, db = affine_backward(dout, caches[-idx - 1])
-            elif self.use_batchnorm:
+            elif self.use_affine_batchnorm_relu:
                 dout, dw, db, dgamma, dbeta = affine_norm_relu_backward(
                     dout, caches[-idx-1])
                 grads['gamma{}'.format(dictID)] = dgamma
                 grads['beta{}'.format(dictID)] = dbeta
             else:
-                dout, dw, db = affine_relu_backward(dout, caches[-idx-1])
+                dout, dw, db = affine_backward(dout, caches[-idx-1])
             grads['W{}'.format(dictID)] = dw + self.reg * W
             grads['b{}'.format(dictID)] = db
         for idx in xrange(N - 1, -1, -1):
