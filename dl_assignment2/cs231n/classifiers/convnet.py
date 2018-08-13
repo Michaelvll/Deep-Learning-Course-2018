@@ -36,7 +36,7 @@ class AffineEndCNN(object):
         for idx, hidden_dim in enumerate(self.layer_dims):
             dictID = idx + len(num_filters) + 1
             self.params['W{}'.format(dictID)] = np.random.randn(
-                prev_dim, hidden_dim)
+                prev_dim, hidden_dim) * weight_scale
             self.params['b{}'.format(dictID)] = np.zeros(hidden_dim)
             prev_dim = hidden_dim
             if use_batchnorm and idx != len(self.layer_dims) - 1:
@@ -104,7 +104,7 @@ class AffineEndCNN(object):
             dictID = N + M - idx
             W, b = self.params['W{}'.format(
                 dictID)], self.params['b{}'.format(dictID)]
-            loss += 0.5 * np.sum(W*W)
+            loss += 0.5 * self.reg * np.sum(W*W)
             if idx == 0:
                 dout, dw, db = affine_backward(dout, caches[-idx - 1])
             elif self.use_batchnorm:
@@ -120,7 +120,7 @@ class AffineEndCNN(object):
             dictID = idx + 1
             W, b = self.params['W{}'.format(
                 dictID)], self.params['b{}'.format(dictID)]
-            loss += 0.5 * np.sum(W*W)
+            loss += 0.5 * self.reg * np.sum(W*W)
             if self.use_batchnorm:
                 dout, dw, db, dgamma, dbeta = conv_norm_relu_pool_backward(
                     dout, caches[idx])
