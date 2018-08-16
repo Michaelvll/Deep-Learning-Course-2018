@@ -7,7 +7,7 @@ from cs231n.layer_utils import *
 
 class AffineEndCNN(object):
     """
-    [conv-sbatchnorm-relu-pool]xN - [affine-batchnorm]xM - affine - softmax
+    [conv-(spatial_batchnorm)-relu-pool]xN - [affine-(batchnorm)]xM - affine - softmax
     """
 
     def __init__(self, input_dim=(3, 32, 32), num_filters=[32], filter_sizes=[4], hidden_dims=[100], num_classes=10, weight_scale=1e-3, reg=0.0, use_batchnorm=True, use_affine_batchnorm_relu=False, dtype=np.float32):
